@@ -8,15 +8,16 @@ getmedia({ audio: true }, function (err, stream) {
     var context = new Context;
     var win = context.sampleRate / 9600;
     var mstream = context.createMediaStreamSource(stream);
-    var unpack = unpacker();
+    var unpack = unpacker({ polarity: 1 });
     unpack.pipe(through(function (buf, enc, next) {
-        //console.log('buf=', [].slice.call(buf));
+        console.log('buf=', [].slice.call(buf));
+document.body.appendChild(document.createTextNode(buf.toString() + ' '));
         next();
     }));
     
     var sproc = context.createScriptProcessor(2048, 1, 1);
     sproc.addEventListener('audioprocess', onaudio);
-    var MIN = 0.05;
+    var MIN = 0.01;
     var bytev = 0;
     var bytepos = 0;
     
@@ -50,14 +51,14 @@ getmedia({ audio: true }, function (err, stream) {
                 for (var j = 0; j < nbits; j++) {
                     bytev += prev << bytepos;
                     if (++bytepos === 8) {
-                        console.log('BYTE=', bytev);
                         bytes.push(bytev);
                         bytev = 0;
+                        bytepos = 0;
                     }
                 }
             }
+            prev = cur;
         }
-        
         if (bytes.length) unpack.write(Buffer(bytes));
     }
 });
