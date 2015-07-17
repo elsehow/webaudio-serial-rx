@@ -30,6 +30,7 @@ document.body.appendChild(document.createTextNode(buf.toString() + ' '));
         var last = 0;
         var bytes = [];
         if (Math.abs(prev) < MIN) prev = null;
+var bits = []; 
         
         for (var i = 1; i < input.length; i++) {
             if (Math.abs(input[i]) < MIN) {
@@ -42,6 +43,7 @@ document.body.appendChild(document.createTextNode(buf.toString() + ' '));
                 last = i;
                 continue;
             }
+bits.push(cur); 
             
             if (cur ^ prev) {
                 var dist = i - last;
@@ -60,5 +62,6 @@ document.body.appendChild(document.createTextNode(buf.toString() + ' '));
             prev = cur;
         }
         if (bytes.length) unpack.write(Buffer(bytes));
+console.log(bits.join('')); 
     }
 });
