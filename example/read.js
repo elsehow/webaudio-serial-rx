@@ -10,37 +10,54 @@ getmedia({ audio: true }, function (err, stream) {
     var mstream = context.createMediaStreamSource(stream);
     var unpack = unpacker();
     unpack.pipe(through(function (buf, enc, next) {
-        console.log('buf=', [].slice.call(buf));
+        //console.log('buf=', [].slice.call(buf));
         next();
     }));
     
     var sproc = context.createScriptProcessor(2048, 1, 1);
     sproc.addEventListener('audioprocess', onaudio);
+    var MIN = 0.05;
+    var bytev = 0;
+    var bytepos = 0;
     
     mstream.connect(sproc);
     sproc.connect(sproc.context.destination);
     
     function onaudio (ev) {
         var input = ev.inputBuffer.getChannelData(0);
-        for (var i = 0; i < input.length; i++) {
-            if (Math.abs(input[i] >= 0.01)) {
-                for (var j = i; j < input.length; j++) {
-                    if (Math.abs(input[j] < 0.01)) break;
+        var prev = input[0] > 0 ? 1 : 0;
+        var last = 0;
+        var bytes = [];
+        if (Math.abs(prev) < MIN) prev = null;
+        
+        for (var i = 1; i < input.length; i++) {
+            if (Math.abs(input[i]) < MIN) {
+                prev = null;
+                continue;
+            }
+            var cur = input[i] > 0 ? 1 : 0;
+            if (prev === null) {
+                prev = cur;
+                last = i;
+                continue;
+            }
+            
+            if (cur ^ prev) {
+                var dist = i - last;
+                last = i;
+                
+                var nbits = Math.round(dist / win);
+                for (var j = 0; j < nbits; j++) {
+                    bytev += prev << bytepos;
+                    if (++bytepos === 8) {
+                        console.log('BYTE=', bytev);
+                        bytes.push(bytev);
+                        bytev = 0;
+                    }
                 }
-                onsample(input.subarray(i,j));
             }
         }
-    }
-    
-    function onsample (input) {
-        var sample = new Buffer(Math.floor(input.length / win / 8));
-        for (var i = 0; i < sample.length; i++) {
-            sample[i] = 0;
-            for (var j = 0; j < 8; j++) {
-                var x = input[(i*8+j)*win] > 0 ? 1 : 0;
-                sample[i] += x << j;
-            }
-        }
-        unpack.write(sample);
+        
+        if (bytes.length) unpack.write(Buffer(bytes));
     }
 });
