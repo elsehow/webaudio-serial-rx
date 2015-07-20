@@ -12,11 +12,6 @@
 ;; this is to prevent google closure compiler from mucking it up
 (defn ^:export init[])
 
-(defn test-case [n]
-  (let [testcase (nth (test-cases) n)
-        observed-bits (freq-map (preprocess (:bits testcase)))
-        correct-bits (freq-map (:correct_bits testcase))]
-    (relate correct-bits observed-bits)))
 
 
 ;; parsing stuff
@@ -29,17 +24,27 @@
 (defn greater-than-three [coll]
   (filter #(> (count %) 3) coll))
 
+(defn trim-leading-zeros [coll]
+  (if
+    (= "0" (first (first coll))) (rest coll)
+    coll))
+
 (defn preprocess [bits]
  (->> bits
        (partition-by identity)
+      (trim-leading-zeros)
        (greater-than-three)
        (flatten)))
 
 (defn relate [correct observed]
   (map
-   #(vector (/ (first %2) (first %1))
+   #(vector ;;(/ (first %2) (first %1))
              (= (second %2) (second %1)))
    correct observed))
 
+(let [testcase (nth (test-cases) 2)
+        observed-bits (preprocess (:bits testcase))
+        correct-bits (:correct_bits testcase)]
+  (relate correct-bits observed-bits))
 
-(test-case 9)
+    ;;(relate correct-bits observed-bits)))
